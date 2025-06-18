@@ -1,0 +1,14 @@
+{
+    "sync_settings": {
+        "log_level": "INFO",
+        "log_file": "squadcast_slack_sync.log",
+        "timeout_seconds": 30
+    },
+    "slack_settings": {
+        "retry_attempts": 3,
+        "retry_delay_seconds": 2
+    },
+    "squadcast_settings": {
+        "sync_interval_minutes": 5
+    }
+}

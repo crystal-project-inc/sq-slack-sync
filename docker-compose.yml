@@ -1,0 +1,15 @@
+version: '3'
+
+services:
+  sq-slack-sync:
+    build: .
+    container_name: sq-slack-sync
+    environment:
+      - SQUADCAST_REFRESH_TOKEN=${SQUADCAST_REFRESH_TOKEN}
+      - SQUADCAST_TEAM_ID=${SQUADCAST_TEAM_ID}
+      - SLACK_BOT_TOKEN=${SLACK_BOT_TOKEN}
+      - SQUADCAST_TENANCY=${SQUADCAST_TENANCY}
+    volumes:
+      - ./logs:/app/logs
+      - ./config.json:/app/config.json
+    restart: on-failure
