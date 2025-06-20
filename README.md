@@ -7,6 +7,16 @@
 
 Squadcast Slack Sync is a tool that synchronizes Squadcast on-call schedules with Slack user groups. It ensures that your Slack user groups always reflect who is currently on-call in Squadcast, enabling seamless communication and incident response.
 
+## Motivation
+
+At Squadcast, our team relies heavily on Slack for internal communication and has developed extensive tooling around the platform over the years. While our Squadcast Slack bot excels at incident response and on-call management, it intentionally doesn't support Slack channel description updates due to engineering and design considerations. Implementing this feature would also require additional permissions when users install the bot in their workspaces.
+
+For our internal on-call operations, our team used to manually update the description of a dedicated Slack channel for on-call related discussion after the weekly on-call handover process. We also used to manually update a Slack user group earlier, enabling team members to easily tag on-call engineers across the workspace.
+
+Without this automation, team members would need to either visit the Squadcast web application or check the #sq-oncall channel to identify the current on-call engineer before posting messages elsewhere. So we built this small app to automate the above usecase.
+
+Hope this will be useful for some companies. Feel free to open up issues or reach out to support if you run into any issues.
+
 ## Features
 
 - **Automatic Synchronization**: Keep Slack user groups up-to-date with Squadcast on-call rotations
