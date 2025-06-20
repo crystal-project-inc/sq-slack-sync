@@ -79,6 +79,51 @@ python main.py
 docker-compose up
 ```
 
+### Deploying as a Kubernetes CronJob
+
+You can deploy the sync tool as a scheduled Kubernetes CronJob using the files provided in the `deployment/` folder:
+
+1. Build and push your Docker image to a container registry:
+   ```bash
+   docker build -t your-registry/sq-slack-sync:latest .
+   docker push your-registry/sq-slack-sync:latest
+   ```
+
+2. Update the image name in `deployment/cronjob.yaml`:
+   ```yaml
+   image: your-registry/sq-slack-sync:latest
+   ```
+
+3. Create base64-encoded secrets for the required environment variables:
+   ```bash
+   echo -n "your-slack-token" | base64
+   echo -n "your-squadcast-refresh-token" | base64
+   echo -n "your-squadcast-team-id" | base64
+   echo -n "squadcast.com" | base64  # or your custom tenancy
+   ```
+
+4. Update `deployment/secrets.yaml` with the base64-encoded values:
+   ```yaml
+   data:
+     SLACK_BOT_TOKEN: <base64-encoded-token>
+     SQUADCAST_REFRESH_TOKEN: <base64-encoded-token>
+     SQUADCAST_TEAM_ID: <base64-encoded-id>
+     SQUADCAST_TENANCY: <base64-encoded-tenancy>
+   ```
+
+5. Apply the Kubernetes manifests:
+   ```bash
+   kubectl apply -f deployment/secrets.yaml
+   kubectl apply -f deployment/cronjob.yaml
+   ```
+
+6. Verify the CronJob is created:
+   ```bash
+   kubectl get cronjobs
+   ```
+
+By default, the CronJob is configured to run every hour. You can modify the schedule in the `cronjob.yaml` file by updating the `schedule` field using standard cron syntax.
+
 ## Setting Up Squadcast and Slack
 
 ### Squadcast Setup
@@ -92,13 +137,20 @@ docker-compose up
 ### Slack Setup
 
 1. Create a Slack app in your workspace
-2. Add the following OAuth scopes:
-   - `usergroups:read`
-   - `usergroups:write`
-   - `users:read`
-   - `users:read.email`
-3. Install the app to your workspace
-4. Copy the Bot User OAuth Token for the `SLACK_BOT_TOKEN` environment variable
+   - **Option 1**: Create manually with the following OAuth scopes:
+     - `usergroups:read`
+     - `usergroups:write`
+     - `users:read`
+     - `users:read.email`
+     - `chat:write`
+   - **Option 2**: Use the provided manifest files:
+     - Go to [api.slack.com/apps](https://api.slack.com/apps)
+     - Click "Create New App" → "From an app manifest"
+     - Select your workspace and paste the contents of either:
+       - `manifests/slack_app.json` (JSON format)
+       - `manifests/slack_app.yaml` (YAML format)
+2. Install the app to your workspace
+3. Copy the Bot User OAuth Token for the `SLACK_BOT_TOKEN` environment variable
 
 ## Important Notes
 
