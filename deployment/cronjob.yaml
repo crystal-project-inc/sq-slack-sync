@@ -1,0 +1,57 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: sq-slack-sync
+  namespace: default
+spec:
+  concurrencyPolicy: Allow
+  failedJobsHistoryLimit: 1
+  jobTemplate:
+    metadata:
+      creationTimestamp: null
+    spec:
+      template:
+        metadata:
+          creationTimestamp: null
+        spec:
+          containers:
+            - command:
+                - python3
+                - main.py
+              env:
+                - name: SQUADCAST_TENANCY
+                  valueFrom:
+                    secretKeyRef:
+                      key: SQUADCAST_TENANCY
+                      name: sq-slack-sync
+                - name: SQUADCAST_REFRESH_TOKEN
+                  valueFrom:
+                    secretKeyRef:
+                      key: SQUADCAST_REFRESH_TOKEN
+                      name: sq-slack-sync
+                - name: SQUADCAST_TEAM_ID
+                  valueFrom:
+                    secretKeyRef:
+                      key: SQUADCAST_TEAM_ID
+                      name: sq-slack-sync
+                - name: SLACK_BOT_TOKEN
+                  valueFrom:
+                    secretKeyRef:
+                      key: SLACK_BOT_TOKEN
+                      name: sq-slack-sync
+              image: <your-image-name>:<tag> # NOTE: Replace <your-image-name>:<tag> with your own built or published image
+              imagePullPolicy: IfNotPresent
+              name: sq-slack-sync
+              resources: {}
+              terminationMessagePath: /dev/termination-log
+              terminationMessagePolicy: File
+          dnsPolicy: ClusterFirst
+          nodeSelector:
+            iam.gke.io/gke-metadata-server-enabled: "true"
+          restartPolicy: OnFailure
+          schedulerName: default-scheduler
+          securityContext: {}
+          terminationGracePeriodSeconds: 30
+  schedule: 0 * * * * # Every hour
+  successfulJobsHistoryLimit: 3
+  suspend: false
