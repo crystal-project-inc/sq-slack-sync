@@ -125,7 +125,7 @@ class SlackClient(httpx.AsyncClient):
 
             if not resp_data.get("ok", False):
                 error_msg = resp_data.get("error", "Unknown error")
-                logger.error(f"Failed to look up user by email: {error_msg}")
+                logger.error(f"Failed to look up user by email: {error_msg}, email: {email}")
                 raise SlackAPIError(
                     f"Failed to look up user by email: {error_msg}",
                     error_code=error_msg,
@@ -182,3 +182,84 @@ class SlackClient(httpx.AsyncClient):
         except httpx.HTTPError as e:
             logger.exception(f"HTTP error when updating user group: {e}")
             raise SlackAPIError(f"HTTP error when updating user group: {str(e)}")
+
+    async def set_channel_topic(self, channel_id: str, topic: str) -> None:
+        """
+        Set the topic for a Slack channel.
+        
+        Args:
+            channel_id: The ID of the channel to update
+            topic: The new topic to set for the channel
+            
+        Returns:
+            None on success
+            
+        Raises:
+            SlackAPIError: If the API returns an error
+        """
+        logger.info(f"Updating channel {channel_id} topic")
+        
+        headers = {"Content-Type": "application/json; charset=utf-8"}
+
+        try:
+            response = await self.post(
+                "/conversations.setTopic",
+                json={
+                    "channel": channel_id,
+                    "topic": topic,
+                },
+                headers=headers,
+            )
+            resp_data = response.json()
+
+            if not resp_data.get("ok", False):
+                error_msg = resp_data.get("error", "Unknown error")
+                logger.error(f"Failed to set channel topic: {error_msg}")
+                raise SlackAPIError(
+                    f"Failed to set channel topic: {error_msg}",
+                    error_code=error_msg,
+                    response=resp_data
+                )
+
+            logger.info(f"Successfully updated channel {channel_id} topic")
+            return
+        except httpx.HTTPError as e:
+            logger.exception(f"HTTP error when setting channel topic: {e}")
+            raise SlackAPIError(f"HTTP error when setting channel topic: {str(e)}")
+
+    async def get_channel_topic(self, channel_id: str) -> str:
+        """
+        Get the current topic for a Slack channel.
+        
+        Args:
+            channel_id: The ID of the channel to get the topic from
+            
+        Returns:
+            The current channel topic as a string
+            
+        Raises:
+            SlackAPIError: If the API returns an error
+        """
+        logger.debug(f"Getting current topic for channel {channel_id}")
+        
+        try:
+            response = await self.get("/conversations.info", params={"channel": channel_id})
+            resp_data = response.json()
+
+            if not resp_data.get("ok", False):
+                error_msg = resp_data.get("error", "Unknown error")
+                logger.error(f"Failed to get channel info: {error_msg}")
+                raise SlackAPIError(
+                    f"Failed to get channel info: {error_msg}",
+                    error_code=error_msg,
+                    response=resp_data
+                )
+
+            # Get the topic from channel info, default to empty string if not set
+            channel_topic = resp_data.get("channel", {}).get("topic", {}).get("value", "")
+            logger.debug(f"Current topic for channel {channel_id}: {channel_topic}")
+            return channel_topic
+            
+        except httpx.HTTPError as e:
+            logger.exception(f"HTTP error when getting channel topic: {e}")
+            raise SlackAPIError(f"HTTP error when getting channel topic: {str(e)}")

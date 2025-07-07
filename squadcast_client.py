@@ -126,6 +126,25 @@ class OncallSchedule(BaseModel):
         logger.debug(f"Email list for schedule {self.schedule.name}: {emails}")
         return emails
 
+    def get_oncall_users(self) -> List[User]:
+        """
+        Extract all users currently on-call in this schedule
+        
+        This handles both individual users and squads (groups of users)
+        
+        Returns:
+            A list of User objects for all on-call users
+        """
+        users = []
+        for op in self.oncallParticipants:
+            if isinstance(op.participant, User):
+                users.append(op.participant)
+            else:
+                users.extend(op.participant.members)
+        
+        logger.debug(f"Gathered {len(users)} users for schedule {self.schedule.name}")
+        return users
+
 
 class WhoIsOncall(BaseModel):
     """
