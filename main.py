@@ -12,7 +12,7 @@ import logging
 import sys
 import env
 import config
-from typing import Dict
+from typing import Dict, List
 from slack_client import SlackClient, SlackAPIError
 from squadcast_client import SquadcastClient, SquadcastAPIError, OncallSchedule
 import colorlog
@@ -43,6 +43,43 @@ color_handler.setFormatter(color_formatter)
 logger.addHandler(color_handler)
 
 
+async def format_channel_topic(schedules: List[OncallSchedule], slack_client: SlackClient) -> str:
+    """
+    Format the channel topic with oncall information for all schedules
+    
+    Args:
+        schedules: List of oncall schedules
+        slack_client: The Slack API client
+        
+    Returns:
+        Formatted topic string
+    """
+    topic_lines = []
+    
+    for schedule_state in schedules:
+        schedule_name = schedule_state.schedule.name
+        oncall_users = schedule_state.get_oncall_users()
+        
+        if not oncall_users:
+            continue
+            
+        # Get Slack user mentions for oncall users
+        mentions = []
+        for user in oncall_users:
+            try:
+                slack_user = await slack_client.get_user_by_email(user.email)
+                mentions.append(f"<@{slack_user.id}>")
+            except SlackAPIError as e:
+                logger.warning(f"Failed to find Slack user for email {user.email}: {e.message}")
+                # Fallback to first name if Slack user not found
+                mentions.append(f"{user.firstName}")
+        
+        if mentions:
+            mentions_str = " ".join(mentions)
+            topic_lines.append(f"{schedule_name}: {mentions_str}")
+    
+    return "\n".join(topic_lines)
+
 
 async def main():
     """Main entry point for the application"""
@@ -72,8 +109,63 @@ async def main():
         schedules = await squadcast_client.get_schedules()
         schedule_states = schedules.whoIsOncall
         
+        # Filter schedules that have slack-usergroup-id tag (only processed schedules)
+        processed_schedules = []
+        channel_ids = set()  # Collect unique channel IDs from all schedules
+        
+        # Update usergroups for each schedule
         for schedule_state in schedule_states:
-            await process_schedule(schedule_state, slack_client)
+            # Check if schedule has the required tag
+            slack_tags = list(
+                filter(
+                    lambda tag: tag.key == "slack-usergroup-id",
+                    schedule_state.schedule.tags,
+                )
+            )
+            
+            if len(slack_tags) == 1:
+                processed_schedules.append(schedule_state)
+                await process_schedule(schedule_state, slack_client)
+                
+                # Check for slack-channel-id tags
+                channel_tags = list(
+                    filter(
+                        lambda tag: tag.key == "slack-channel-id",
+                        schedule_state.schedule.tags,
+                    )
+                )
+                
+                # Add channel IDs from this schedule (support comma-separated values)
+                for channel_tag in channel_tags:
+                    channel_ids_from_tag = [cid.strip() for cid in channel_tag.value.split(",")]
+                    channel_ids.update(channel_ids_from_tag)
+            else:
+                logger.info(f"Skipping schedule '{schedule_state.schedule.name}' as no slack-usergroup-id tag is found")
+        
+        # Update channel topics for all collected channel IDs
+        for channel_id in channel_ids:
+            if channel_id:
+                logger.info(f"Checking channel topic for channel {channel_id}")
+                try:
+                    new_topic = await format_channel_topic(processed_schedules, slack_client)
+                    if new_topic:
+                        try:
+                            current_topic = await slack_client.get_channel_topic(channel_id)
+                            if current_topic == new_topic:
+                                logger.info(f"Channel topic for {channel_id} is already up to date")
+                            else:
+                                logger.info(f"Updating channel topic for channel {channel_id}")
+                                await slack_client.set_channel_topic(channel_id, new_topic)
+                                logger.info(f"Successfully updated channel topic for {channel_id}")
+                        except SlackAPIError as e:
+                            logger.warning(f"Could not get current topic for channel {channel_id}: {e.message}")
+                            logger.info(f"Proceeding with topic update for channel {channel_id}")
+                            await slack_client.set_channel_topic(channel_id, new_topic)
+                            logger.info(f"Successfully updated channel topic for {channel_id}")
+                    else:
+                        logger.warning("No oncall information available for channel topic")
+                except SlackAPIError as e:
+                    logger.error(f"Failed to update channel topic for {channel_id}: {e.message}")
         
         logger.info("Sync completed successfully")
         
@@ -105,14 +197,12 @@ async def process_schedule(schedule_state: OncallSchedule, slack_client: SlackCl
     Args:
         schedule_state: The schedule to process
         slack_client: The Slack API client
-        dry_run: Whether to run in dry-run mode (no actual changes)
         
     Returns:
         None
     """
     schedule_name = schedule_state.schedule.name
     
-    # Find the slack usergroup ID tag
     slack_tags = list(
         filter(
             lambda tag: tag.key == "slack-usergroup-id",
@@ -120,11 +210,6 @@ async def process_schedule(schedule_state: OncallSchedule, slack_client: SlackCl
         )
     )
     
-    # Skip schedules without the required tag
-    if len(slack_tags) != 1:
-        logger.info(f"Skipping schedule '{schedule_name}' as no slack-usergroup-id tag is found")
-        return
-
     slack_usergroup_id = slack_tags[0].value
     logger.info(f"Processing schedule '{schedule_name}' with Slack usergroup ID: {slack_usergroup_id}")
 

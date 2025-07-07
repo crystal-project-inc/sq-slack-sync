@@ -1,27 +1,30 @@
 {
-    "display_information": {
-        "name": "Squadcast Slack Sync"
-    },
-    "features": {
-        "bot_user": {
-            "display_name": "Squadcast Slack Sync",
-            "always_online": false
-        }
-    },
-    "oauth_config": {
-        "scopes": {
-            "bot": [
-                "chat:write",
-                "usergroups:write",
-                "users:read",
-                "users:read.email",
-                "usergroups:read"
-            ]
-        }
-    },
-    "settings": {
-        "org_deploy_enabled": false,
-        "socket_mode_enabled": false,
-        "token_rotation_enabled": false
+  "display_information": {
+    "name": "Squadcast Slack Sync"
+  },
+  "features": {
+    "bot_user": {
+      "display_name": "Squadcast Slack Sync",
+      "always_online": false
     }
+  },
+  "oauth_config": {
+    "scopes": {
+      "bot": [
+        "chat:write",
+        "usergroups:write",
+        "users:read",
+        "users:read.email",
+        "usergroups:read",
+        "channels:manage",
+        "channels:write.topic",
+        "channels:read"
+      ]
+    }
+  },
+  "settings": {
+    "org_deploy_enabled": false,
+    "socket_mode_enabled": false,
+    "token_rotation_enabled": false
+  }
 }
