@@ -170,9 +170,27 @@ You can also deploy the sync tool using GitHub Actions, which provides a simpler
    - Once the test passes, you can run the actual sync
    - The workflow will update your Slack user groups with current on-call information
 
-#### Scheduled Setup (Coming Soon)
+#### Scheduled Setup
 
-Once the manual workflow is working, you can enable scheduled runs by modifying the workflow file to include a cron schedule.
+The repository includes a scheduled workflow that runs every 15 minutes from noon to 6pm EST on Thursdays. This targeted schedule is designed to catch typical Thursday afternoon schedule changes.
+
+**Schedule Details:**
+- **When**: Every Thursday
+- **Time**: 12:00 PM - 6:00 PM EST (5:00 PM - 11:00 PM UTC)
+- **Frequency**: Every 15 minutes
+- **Total runs per Thursday**: 24 sync operations
+
+**To enable scheduled runs:**
+1. The scheduled workflow is already configured in `.github/workflows/scheduled-sync.yml`
+2. GitHub Actions will automatically run the workflow according to the schedule
+3. You can monitor scheduled runs in the Actions tab
+4. Failed runs will upload logs as artifacts for debugging
+
+**Customizing the schedule:**
+You can modify the cron expression in `.github/workflows/scheduled-sync.yml` to match your specific needs:
+- Change the time range by modifying the hour range `17-23`
+- Change the frequency by modifying the minute values `0,15,30,45`
+- Change the day by modifying the day-of-week value `4` (Thursday)
 
 ## Setting Up Squadcast and Slack
 

@@ -1,0 +1,58 @@
+name: Scheduled Squadcast Slack Sync
+
+on:
+  schedule:
+    # Run every 15 minutes from noon to 6pm EST on Thursdays
+    # UTC times: 17:00-23:00 (noon-6pm EST = 5pm-11pm UTC, accounting for EST/EDT)
+    # Cron format: minute hour day month day-of-week
+    - cron: "0,15,30,45 17-23 * * 4" # Every 15 min, 5-11pm UTC, Thursdays
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.9"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Test setup
+        env:
+          SQUADCAST_REFRESH_TOKEN: ${{ secrets.SQUADCAST_REFRESH_TOKEN }}
+          SQUADCAST_TEAM_ID: ${{ secrets.SQUADCAST_TEAM_ID }}
+          SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
+          SQUADCAST_TENANCY: ${{ secrets.SQUADCAST_TENANCY }}
+        run: |
+          echo "Testing setup and connectivity..."
+          python test_setup.py
+
+      - name: Run Squadcast Slack Sync
+        env:
+          SQUADCAST_REFRESH_TOKEN: ${{ secrets.SQUADCAST_REFRESH_TOKEN }}
+          SQUADCAST_TEAM_ID: ${{ secrets.SQUADCAST_TEAM_ID }}
+          SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
+          SQUADCAST_TENANCY: ${{ secrets.SQUADCAST_TENANCY }}
+        run: |
+          echo "Starting scheduled Squadcast Slack Sync..."
+          echo "Environment check:"
+          echo "- SQUADCAST_TEAM_ID: ${SQUADCAST_TEAM_ID:0:8}..."
+          echo "- SQUADCAST_TENANCY: $SQUADCAST_TENANCY"
+          echo "- SLACK_BOT_TOKEN: ${SLACK_BOT_TOKEN:0:8}..."
+          echo "- SQUADCAST_REFRESH_TOKEN: ${SQUADCAST_REFRESH_TOKEN:0:8}..."
+          python main.py
+
+      - name: Upload logs (if sync fails)
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: sync-logs
+          path: squadcast_slack_sync.log
