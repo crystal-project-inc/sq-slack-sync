@@ -27,7 +27,7 @@ Hope this will be useful for some companies. Feel free to open up issues or reac
 
 ## Installation
 
-```bash
+````bash
 # Clone the repository
 git clone https://github.com/SquadcastHub/sq-slack-sync.git
 
@@ -36,7 +36,9 @@ cd sq-slack-sync
 
 # Install dependencies
 pip install -r requirements.txt
-```
+
+# Test the setup (optional)
+python test_setup.py
 
 ## Configuration
 
@@ -72,7 +74,7 @@ The application can also be configured using a `config.json` file:
     "sync_interval_minutes": 5
   }
 }
-```
+````
 
 ## Usage
 
@@ -138,6 +140,39 @@ You can deploy the sync tool as a scheduled Kubernetes CronJob using the files p
    ```
 
 By default, the CronJob is configured to run every hour. You can modify the schedule in the `cronjob.yaml` file by updating the `schedule` field using standard cron syntax.
+
+### Deploying with GitHub Actions
+
+You can also deploy the sync tool using GitHub Actions, which provides a simpler setup without requiring Kubernetes infrastructure.
+
+#### Manual Trigger Setup
+
+1. **Fork this repository** to your GitHub account
+
+2. **Add GitHub Secrets** in your repository:
+
+   - Go to your repository → Settings → Secrets and variables → Actions
+   - Add the following repository secrets:
+     - `SQUADCAST_REFRESH_TOKEN`: Your Squadcast API refresh token
+     - `SQUADCAST_TEAM_ID`: ID of your Squadcast team
+     - `SLACK_BOT_TOKEN`: Your Slack bot user OAuth token
+     - `SQUADCAST_TENANCY`: Your Squadcast tenancy domain (default: squadcast.com)
+
+3. **Test the setup** (recommended first step):
+
+   - Go to your repository → Actions tab
+   - Select "Manual Squadcast Slack Sync" workflow
+   - Click "Run workflow" → "Run workflow"
+   - The workflow will first run a test to verify connectivity and configuration
+   - Check the logs to ensure everything is working correctly
+
+4. **Run the sync manually**:
+   - Once the test passes, you can run the actual sync
+   - The workflow will update your Slack user groups with current on-call information
+
+#### Scheduled Setup (Coming Soon)
+
+Once the manual workflow is working, you can enable scheduled runs by modifying the workflow file to include a cron schedule.
 
 ## Setting Up Squadcast and Slack
 
