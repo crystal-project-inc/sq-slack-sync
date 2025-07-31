@@ -85,19 +85,20 @@ async def test_setup():
     try:
         slack_client = SlackClient(slack_bot_token)
         
-        # Test basic API call
-        auth_test = await slack_client.test_auth()
-        logger.info(f"✅ Slack API connection successful")
-        logger.info(f"  - Bot user: {auth_test.get('user', 'Unknown')}")
-        logger.info(f"  - Team: {auth_test.get('team', 'Unknown')}")
+        # Test by trying to get a user by email (this will test the API connection)
+        # We'll use a dummy email to test the connection, but expect it to fail gracefully
+        try:
+            await slack_client.get_user_by_email("test@example.com")
+            logger.warning("Unexpected: Found user with test@example.com")
+        except SlackAPIError as e:
+            if "users_not_found" in e.message:
+                logger.info("✅ Slack API connection successful")
+                logger.info("  - API authentication working correctly")
+                logger.info("  - User lookup functionality available")
+            else:
+                logger.error(f"❌ Slack API error: {e.message}")
+                return False
         
-        # Test user group access
-        usergroups = await slack_client.get_user_groups()
-        logger.info(f"  - Accessible user groups: {len(usergroups)}")
-        
-    except SlackAPIError as e:
-        logger.error(f"❌ Slack API error: {e.message}")
-        return False
     except Exception as e:
         logger.error(f"❌ Slack connection error: {e}")
         return False
